@@ -10,13 +10,13 @@
 
 /**
  YNPage样式
-
+ 
  - YNPageStyleTop: MenuView在顶部
  - YNPageStyleNavigation: MenuView在系统导航条
  - YNPageStyleSuspensionTop: MenuView悬浮，刷新控件在HeaderView顶部
  - YNPageStyleSuspensionCenter: MenuView悬浮，刷新控件在HeaderView底部
  - YNPageStyleSuspensionTopPause: MenuView悬浮，刷新控件在HeaderView顶部 停顿 类似QQ联系人页面
-   SuspensionTopPause 需要继承YNPageTableView或YNPageCollectionView 实现那个手势 YES,如果有自己的集成体系，则单独实现那个方法
+ SuspensionTopPause 需要继承YNPageTableView或YNPageCollectionView 实现那个手势 YES,如果有自己的集成体系，则单独实现那个方法
  */
 typedef NS_ENUM(NSInteger, YNPageStyle) {
     YNPageStyleTop = 0,
@@ -28,7 +28,7 @@ typedef NS_ENUM(NSInteger, YNPageStyle) {
 
 /**
  头部放大效果
-
+ 
  - YNPageHeaderViewScaleModeTop: Top固定
  - YNPageHeaderViewScaleModeCenter: Center固定
  */
@@ -61,7 +61,10 @@ typedef NS_ENUM(NSInteger, YNPageHeaderViewScaleMode) {
 /** headerView + menu height */
 @property (nonatomic, assign, readonly) CGFloat pageHeaderViewOriginHeight;
 
-#pragma mark - UIScrollMenuView Config
+
+
+
+#pragma mark - UIScrollMenuView Config   菜单栏 YNPageScrollMenuView 的 样式配置
 /** 是否显示遮盖*/
 @property (nonatomic, assign) BOOL showConver;
 /** 是否显示线条 YES */
@@ -167,3 +170,4 @@ typedef NS_ENUM(NSInteger, YNPageHeaderViewScaleMode) {
 - (void)setRGBWithProgress:(CGFloat)progress;
 
 @end
+

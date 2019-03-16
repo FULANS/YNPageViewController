@@ -33,7 +33,7 @@
 
 /**
  初始化YNPageScrollMenuView
-
+ 
  @param frame 大小
  @param titles 标题
  @param configration 配置信息
@@ -46,7 +46,7 @@
                                    delegate:(id<YNPageScrollMenuViewDelegate>)delegate
                                currentIndex:(NSInteger)currentIndex;
 
-/// 根据标题修下标修改标题
+/// 根据 下标 修改 对应标题
 - (void)updateTitle:(NSString *)title index:(NSInteger)index;
 
 /// 根据标题数组刷新标题
@@ -55,7 +55,7 @@
 /// 根据下标调整Item位置
 - (void)adjustItemPositionWithCurrentIndex:(NSInteger)index;
 
-/// 根据上个下标和当前点击的下标调整进度
+/// 根据上个下标和当前点击的下标调整进度  (没啥实际用处)
 - (void)adjustItemWithProgress:(CGFloat)progress
                      lastIndex:(NSInteger)lastIndex
                   currentIndex:(NSInteger)currentIndex;
@@ -68,7 +68,8 @@
 /// 调整Item
 - (void)adjustItemAnimate:(BOOL)animated;
 
-/// 刷新视图
+/// 刷新视图 (会清空全部的item,重新创建布局)
 - (void)reloadView;
 
 @end
+

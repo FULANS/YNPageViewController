@@ -116,7 +116,8 @@
 }
 
 + (instancetype)defaultConfig {
-    return [[self alloc] init];
+    return [[self alloc] init]; // 查看 init 默认 配置 方法!!!
 }
 
 @end
+

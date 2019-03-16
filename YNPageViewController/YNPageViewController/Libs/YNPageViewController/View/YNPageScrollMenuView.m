@@ -11,6 +11,8 @@
 #import "YNPageScrollView.h"
 #import "UIView+YNPageExtend.h"
 
+#define kTagNum 10086
+
 #define kYNPageScrollMenuViewConverMarginX 5
 
 #define kYNPageScrollMenuViewConverMarginW 10
@@ -33,7 +35,7 @@
 @property (nonatomic, assign) NSInteger lastIndex;
 /// 当前index
 @property (nonatomic, assign) NSInteger currentIndex;
-/// items
+/// items: 使用 Button 的 好处 在于 支持 图片 + 文字
 @property (nonatomic, strong) NSMutableArray<UIButton *> *itemsArrayM;
 /// item宽度
 @property (nonatomic, strong) NSMutableArray *itemsWidthArraM;
@@ -49,6 +51,7 @@
                                configration:(YNPageConfigration *)configration
                                    delegate:(id<YNPageScrollMenuViewDelegate>)delegate
                                currentIndex:(NSInteger)currentIndex {
+    // 根据 配置项 重置传进来的 Frame
     frame.size.height = configration.menuHeight;
     frame.size.width = configration.menuWidth;
     
@@ -73,10 +76,12 @@
 
 - (void)setupItems {
     if (self.configration.buttonArray.count > 0 && self.titles.count == self.configration.buttonArray.count) {
+        // 外部传进了自定义的按钮数组
         [self.configration.buttonArray enumerateObjectsUsingBlock:^(UIButton * _Nonnull itemButton, NSUInteger idx, BOOL * _Nonnull stop) {
             [self setupButton:itemButton title:self.titles[idx] idx:idx];
         }];
     } else {
+        // 外部没有传进 自定义 按钮数组 或者 标题数组 与 外部数组 个数不一致 , 以 标题数组 为准
         [self.titles enumerateObjectsUsingBlock:^(id  _Nonnull title, NSUInteger idx, BOOL * _Nonnull stop) {
             UIButton *itemButton = [UIButton buttonWithType:UIButtonTypeCustom];
             [self setupButton:itemButton title:title idx:idx];
@@ -85,21 +90,28 @@
 }
 
 - (void)setupButton:(UIButton *)itemButton title:(NSString *)title idx:(NSInteger)idx {
+    // 根据配置项 重新 设置 菜单栏item按钮 的 属性
     itemButton.titleLabel.font = self.configration.selectedItemFont;
     [itemButton setTitleColor:self.configration.normalItemColor forState:UIControlStateNormal];
     [itemButton setTitle:title forState:UIControlStateNormal];
-    itemButton.tag = idx;
+    itemButton.tag = idx; // Tag 值 不建议 配置 0。 这边没问题是因为: 不通过 viewwithTag 值 取 按钮,都是通过下标取, tag的作用在于 赋值 currentIndex !!! 所以
     [itemButton addTarget:self action:@selector(itemButtonOnClick:) forControlEvents:UIControlEventTouchUpInside];
-    [itemButton sizeToFit];
-    [self.itemsWidthArraM addObject:@(itemButton.yn_width)];
-    [self.itemsArrayM addObject:itemButton];
+    [itemButton sizeToFit]; // 根据字体,文字, 自动算出 最优 size ,然后改变 frame.size
+    /* sizeToFit 与 sizeThatFit
+     sizeThatFits: 会计算出最优的 size 但是不会改变 自己的 size，而 sizeToFit: 会计算出最优的 size 而且会改变自己的 size。那么两者的联系是什么呢？
+     实际上，当调用 sizeToFit 后会调用 sizeThatFits 方法来计算 UIView 的 bounds.size 然后改变 frame.size。
+     */
+    [self.itemsWidthArraM addObject:@(itemButton.yn_width)]; // 存储文字宽度
+    [self.itemsArrayM addObject:itemButton]; // 存储按钮, setupOtherViews 之后 按钮的实际宽度根据配置项被修改了
     [self.scrollView addSubview:itemButton];
 }
 
+// 根据配置项,计算 Item 的 frame , scrollview的contentsize
 - (void)setupOtherViews {
+    
     self.scrollView.frame = CGRectMake(0, 0, self.configration.showAddButton ? self.yn_width - self.yn_height : self.yn_width, self.yn_height);
     [self addSubview:self.scrollView];
-    if (self.configration.showAddButton) {
+    if (self.configration.showAddButton) { // addButton 正方形 !!!
         self.addButton.frame = CGRectMake(self.yn_width - self.yn_height, 0, self.yn_height, self.yn_height);
         [self addSubview:self.addButton];
     }
@@ -118,7 +130,7 @@
         }
         button.frame = CGRectMake(itemX, itemY, [self.itemsWidthArraM[idx] floatValue], itemH);
     }];
-    
+    // scroll 宽度 = 右边间隙 + 最后一个按钮的右边缘的坐标
     CGFloat scrollSizeWidht = self.configration.itemLeftAndRightMargin + CGRectGetMaxX([[self.itemsArrayM lastObject] frame]);
     if (scrollSizeWidht < self.scrollView.yn_width) {//不超出宽度
         itemX = 0;
@@ -201,7 +213,7 @@
     if (self.configration.itemMaxScale > 1) {
         ((UIButton *)self.itemsArrayM[self.currentIndex]).transform = CGAffineTransformMakeScale(self.configration.itemMaxScale, self.configration.itemMaxScale);
     }
-    [self setDefaultTheme];
+    [self setDefaultTheme]; // 设置被默认选择的item项的主题
     [self selectedItemIndex:self.currentIndex animated:NO];
 }
 
@@ -256,9 +268,9 @@
             obj.selected = NO;
             [obj setTitleColor:self.configration.normalItemColor forState:UIControlStateNormal];
             obj.titleLabel.font = self.configration.itemFont;
-            if (idx == self.itemsArrayM.count - 1) {
-               currentButton.selected = YES;
-               [currentButton setTitleColor:self.configration.selectedItemColor forState:UIControlStateNormal];
+            if (idx == self.itemsArrayM.count - 1) {// 指遍历 到 数组最后一个, 可以 处理 当前选中的 item
+                currentButton.selected = YES;
+                [currentButton setTitleColor:self.configration.selectedItemColor forState:UIControlStateNormal];
                 currentButton.titleLabel.font = self.configration.selectedItemFont;
             }
         }];
@@ -305,10 +317,11 @@
 }
 
 - (void)adjustItemPositionWithCurrentIndex:(NSInteger)index {
+    
     if (self.scrollView.contentSize.width != self.scrollView.yn_width + 20) {
         
         UIButton *button = self.itemsArrayM[index];
-
+        
         CGFloat offSex = button.center.x - self.scrollView.yn_width * 0.5;
         
         offSex = offSex > 0 ? offSex : 0;
@@ -489,7 +502,7 @@
     for (UIView *view in self.scrollView.subviews) {
         [view removeFromSuperview];
     }
-
+    
     [self.itemsArrayM removeAllObjects];
     [self.itemsWidthArraM removeAllObjects];
     [self setupSubViews];

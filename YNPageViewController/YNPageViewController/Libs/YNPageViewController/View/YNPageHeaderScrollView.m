@@ -25,7 +25,9 @@
 }
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    // 重置偏移量 !!!
     [scrollView setContentOffset:CGPointMake(0, 0) animated:NO];
 }
 
 @end
+

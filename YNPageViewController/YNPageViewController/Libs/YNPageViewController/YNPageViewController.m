@@ -58,9 +58,10 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    [self initData];
-    [self setupSubViews];
-    [self setSelectedPageIndex:self.pageIndex];
+    [self initData]; // 判断数据源个数是不是匹配
+    [self setupSubViews]; // 配置 头部视图 HeadView , 菜单栏Menu , 页面Scroll(pageScrollView),如果是YNPageStyleSuspensionTopPause 样式 ,再配置 背景Scroll(bgScrollView)
+    
+    [self setSelectedPageIndex:self.pageIndex]; // 设置最初的布局效果: 把 HeadView 和 Menu 放到 第一个展示的TableView(已TableView为例)中,设置TableView内容偏移,造成是它们成了TableviewHeadView的错觉
 }
 
 #pragma mark - Initialize Method
@@ -119,11 +120,11 @@
     switch (self.config.pageStyle) {
         case YNPageStyleTop:
         case YNPageStyleSuspensionTop:
-        case YNPageStyleSuspensionCenter: {
+        case YNPageStyleSuspensionCenter: { // 添加在 View 上
             [self.view addSubview:self.scrollMenuView];
         }
             break;
-        case YNPageStyleNavigation: {
+        case YNPageStyleNavigation: { // 添加在 导航栏 上
             UIViewController *vc;
             if ([self.parentViewController isKindOfClass:[UINavigationController class]]) {
                 vc = self;
@@ -133,7 +134,7 @@
             vc.navigationItem.titleView = self.scrollMenuView;
         }
             break;
-        case YNPageStyleSuspensionTopPause: {
+        case YNPageStyleSuspensionTopPause: { // 添加在背景ScrollView上
             [self.bgScrollView addSubview:self.scrollMenuView];
         }
             break;
@@ -142,14 +143,18 @@
 
 #pragma mark - 初始化子控制器
 - (void)initViewControllerWithIndex:(NSInteger)index {
+    // 记录当前视图控制器
     self.currentViewController = self.controllersM[index];
-
+    // 记录当前页面index
     self.pageIndex = index;
     NSString *title = [self titleWithIndex:index];
+    // 判断展示字典中是否已经存在
     if ([self.displayDictM objectForKey:[self getKeyWithTitle:title]]) return;
-    
+    // 从缓存中取 对应 title 的视图控制器
     UIViewController *cacheViewController = [self.cacheDictM objectForKey:[self getKeyWithTitle:title]];
+    // 如果缓存中没有,那么再从数据源中取出
     [self addViewControllerToParent:cacheViewController ?: self.controllersM[index] index:index];
+    
 }
 
 /// 添加到父类控制器中
@@ -185,6 +190,7 @@
             scrollView.contentInset = UIEdgeInsetsMake(_insetTop, 0, scrollView.contentInset.bottom + 3 * kDEFAULT_INSET_BOTTOM, 0);
         }
         if ([self isSuspensionBottomStyle]) {
+            // 处理滚动条展示, 也是用户错觉处理
             scrollView.scrollIndicatorInsets = UIEdgeInsetsMake(_insetTop, 0, 0, 0);
         }
         
@@ -194,7 +200,7 @@
             self.scrollMenuView.yn_y = self.headerBgView.yn_bottom;
             [scrollView addSubview:self.headerBgView];
             [scrollView addSubview:self.scrollMenuView];
-            /// 设置首次偏移量置顶
+            /// 设置首次偏移量置顶,相当于没设置偏移量,也是错觉处理 把HeadView和Menu当成tableHeadView
             [scrollView setContentOffset:CGPointMake(0, -_insetTop) animated:NO];
             
         } else {
@@ -212,8 +218,8 @@
                 }
             } else {
                 CGFloat scrollMenuViewDeltaY = _scrollMenuViewOriginY - scrollMenuViewY;
-                    scrollMenuViewDeltaY = -_insetTop +  scrollMenuViewDeltaY;
-                    /// 求出偏移了多少 未悬浮 (多个ScrollView偏移量联动)
+                scrollMenuViewDeltaY = -_insetTop +  scrollMenuViewDeltaY;
+                /// 求出偏移了多少 未悬浮 (多个ScrollView偏移量联动)
                 scrollView.contentOffset = CGPointMake(0, scrollMenuViewDeltaY);
             }
         }
@@ -254,7 +260,9 @@
     if ([self isSuspensionTopPauseStyle]) {
         self.currentScrollView.scrollEnabled = YES;
     }
+    // 将headerView 从 view 上 放置 tableview 上
     [self replaceHeaderViewFromView];
+    // 移除上一个展示的视图控制器
     [self removeViewController];
     [self.scrollMenuView adjustItemPositionWithCurrentIndex:self.pageIndex];
     
@@ -272,19 +280,20 @@
     }
     
     CGFloat currentPostion = scrollView.contentOffset.x;
-
+    
     CGFloat offsetX = currentPostion / kYNPAGE_SCREEN_WIDTH;
-
+    
     CGFloat offX = currentPostion > self.lastPositionX ? ceilf(offsetX) : offsetX;
-
+    
+    // 将 headerView 从 tableview 上 放置 view 上
     [self replaceHeaderViewFromTableView];
     
-    [self initViewControllerWithIndex:offX];
-
-    CGFloat progress = offsetX - (NSInteger)offsetX;
-
-    self.lastPositionX = currentPostion;
+    [self initViewControllerWithIndex:offX]; // 这个方法内部判断,当前scrollview上是不是已经有下个要展示的 子视图View了,如果没有的话,现在初始化并加上去
     
+    CGFloat progress = offsetX - (NSInteger)offsetX;
+    
+    self.lastPositionX = currentPostion;
+    // 滚动处理 菜单栏
     [self.scrollMenuView adjustItemWithProgress:progress lastIndex:floor(offsetX) currentIndex:ceilf(offsetX)];
     
     if (floor(offsetX) == ceilf(offsetX)) {
@@ -344,7 +353,7 @@
     } else if ([self isSuspensionTopPauseStyle]) {
         [self calcuSuspendTopPauseWithCurrentScrollView:scrollView];
     } else {
-         [self invokeDelegateForScrollWithOffsetY:scrollView.contentOffset.y];
+        [self invokeDelegateForScrollWithOffsetY:scrollView.contentOffset.y];
     }
 }
 
@@ -372,17 +381,19 @@
 
 #pragma mark - Public Method
 - (void)setSelectedPageIndex:(NSInteger)pageIndex {
+    
     if (self.cacheDictM.count > 0 && pageIndex == self.pageIndex) return;
     
     if (pageIndex > self.controllersM.count - 1) return;
     
     CGRect frame = CGRectMake(self.pageScrollView.yn_width * pageIndex, 0, self.pageScrollView.yn_width, self.pageScrollView.yn_height);
-    if (frame.origin.x == self.pageScrollView.contentOffset.x) {
+    if (frame.origin.x == self.pageScrollView.contentOffset.x) { // 这种情况只会出现在 初始化时 默认 pageIndex为0的时候
         [self scrollViewDidScroll:self.pageScrollView];
     } else {
+        // 使用这个方法可以将滚动到特定的区域，让视图可见。  还有一点需要注意的是该可见视图是在这个滚动视图的范围而当前不可见，如果当前已经可见了，那么这个方法将不会做任何事情。
         [self.pageScrollView scrollRectToVisible:frame animated:NO];
     }
-    
+    // 最后主动调用结束减速方法
     [self scrollViewDidEndDecelerating:self.pageScrollView];
 }
 
@@ -403,7 +414,7 @@
     [self.headerBgView removeFromSuperview];
     [self.bgScrollView removeFromSuperview];
     [self.pageScrollView removeFromSuperview];
-
+    
     [self.scrollMenuView removeFromSuperview];
     
     [self setupSubViews];
@@ -629,9 +640,9 @@
 
 /// 初始化子View
 - (void)setupSubViews {
-    [self setupHeaderBgView];
-    [self setupPageScrollMenuView];
-    [self setupPageScrollView];
+    [self setupHeaderBgView]; /**<初始化背景headerView*/
+    [self setupPageScrollMenuView]; /**<初始化PageScrollMenu*/
+    [self setupPageScrollView];  /**<初始化PageScrollView*/
 }
 
 /// 初始化PageScrollView
@@ -667,7 +678,7 @@
         
         self.config.contentHeight = self.pageScrollView.yn_height - self.config.menuHeight;
         if (kLESS_THAN_iOS11) {
-            [self.view addSubview:[UIView new]];            
+            [self.view addSubview:[UIView new]];
         }
         [self.view addSubview:self.pageScrollView];
     }
@@ -680,12 +691,13 @@
 
 /// 初始化背景headerView
 - (void)setupHeaderBgView {
+    // HeadView + MenuView 样式
     if ([self isSuspensionBottomStyle] || [self isSuspensionTopStyle] || [self isSuspensionTopPauseStyle]) {
 #if DEBUG
         NSAssert(self.headerView, @"Please set headerView !");
 #endif
-        self.headerBgView = [[YNPageHeaderScrollView alloc] initWithFrame:self.headerView.bounds];
-        self.headerBgView.contentSize = CGSizeMake(kYNPAGE_SCREEN_WIDTH * 2, self.headerView.yn_height);
+        self.headerBgView = [[YNPageHeaderScrollView alloc] initWithFrame:self.headerView.bounds]; // 将外部传递的headerView 转成内部使用的 headerBgView
+        self.headerBgView.contentSize = CGSizeMake(kYNPAGE_SCREEN_WIDTH * 2, self.headerView.yn_height); // ? 为什么 设置一个2倍屏幕宽度的 内容宽度
         [self.headerBgView addSubview:self.headerView];
         self.headerViewOriginHeight = self.headerBgView.yn_height;
         self.headerBgView.scrollEnabled = !self.config.headerViewCouldScrollPage;
@@ -696,6 +708,7 @@
         }
         self.config.tempTopHeight = self.headerBgView.yn_height + self.config.menuHeight;
         
+        // 计算 TableView 距离顶部的偏移量
         _insetTop = self.headerBgView.yn_height + self.config.menuHeight;
         
         _scrollMenuViewOriginY = _headerView.yn_height;
@@ -719,7 +732,7 @@
             
             [self.headerBgView removeFromSuperview];
             [self.scrollMenuView removeFromSuperview];
-
+            
             self.headerBgView.yn_y = headerViewY;
             self.scrollMenuView.yn_y = scrollMenuViewY;
             
@@ -1058,3 +1071,4 @@
 }
 
 @end
+
